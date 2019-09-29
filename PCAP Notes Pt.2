@@ -1,0 +1,44 @@
+
+In this challenge, the file only contains a single HTTP request. The key is available in the Authorization header of the request. The credentials are provided using a Bearer token. The token is using the JSON Web Token (JWT) format. The format used follows this patterns:
+
+The header.
+a dot .
+The payload.
+a dot .
+The signature.
+The key is stored as part of the payload. The payload is base64 encoded and stored in JSON. Using this information you should be able to get the key.
+
+eg.:
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJteV9rZXkiOiIxYzRiNzQ5My0wODZkLTQ4MDUtYTY3Yi1kMjRkMmQ3NjBkODIifQ._OFtLxzAf72yb0xlud0wYlEQMPWXw5szxDIKhiW0yIw
+
+Just Base64 Decode the whole thing
+
+##############################################################
+
+In this challenge, the file only contains a single HTTP request. The key is available in the body of the response as part of the HTML code. However this time, the response is deflated. This compression is used to limit the amount of data that needs to be transfered.
+
+Using Wireshark, you can open the file. Once the file is loaded, you should be able to right-click and select "Follow" -> "TCP Stream". This command will open a new window with the full TCP connection. This command basically reconstruct the connection so you're able to inspect the data without having to worry about the lower layer (IP and ARP). Then you need to select "Show and save data as" and select "RAW", then you can click on the "Save as..." button. Once you have the file save, you can edit it to remove everything aside from the body of the response (located after the last header). Finally, you can save the file and run gunzip on it to decompress the content and get the key. However, since the content is deflate instead of simply gzip, you will need to add some magic bytes to the response to get gunzip working:
+
+printf "\x1f\x8b\x08\x00\x00\x00\x00\x00"  | cat - pcap_21_extracted_body | gunzip 
+Where pcap_21_extracted_body is the file containing the body of the response.
+
+Alternatively, you can look into "Follow HTTP stream".
+
+
+
+###############################################################
+
+This challenge
+In this challenge, the file contains a TLS connection. The connection is encrypted using TLS. However, you should be able to decrypt it using the private key. To do so you need to select one of the TLS packets and right-click to go to Protocol Preferences then RSA keys list. From there you can feed all the details: IP address, port, protocol (use http or tcp) and the server's private key pcap_32_server_private_key.pem. Once you click Ok, you should see the decrypted traffic that contains the key to solve this exercise.
+
+You are able to decrypt this TLS connection because the server does not use Forward Secrecy. In the next challenge, we will look at how it can be done with Forward Secrecy.
+
+###############################################################
+
+This challenge
+In this challenge, the file contains a TLS connection. The connection is encrypted using TLS. This time, the connection uses Forward Secrecy (you can compare the Cipher Suite in the Server Hello between pcap_32.pcap and pcap_33.pcap. Since Forward Secrecy is used, you cannot decrypt the connection with the server's private key. This ensures that if the server's private key is compromised, someone sniffing the traffic prior to the compromise cannot recover the cleartext traffic.
+
+However, by modifying the client or the server, it's possible to retrieve the pre-shared key used to secure the communication: pcap_33_premaster.txt. Here, you can use this key to decrypt the communication. To do this, you can follow the following steps: right-click on a TLS packet, select "Protocol Preferences", then SSL debug file. Then, you can just pick the file pcap_33_premaster.txt using the (Pre)-Master-Secret log filename field. You should then get access to the cleartext traffic that contains the key.
+
+##############################################################
